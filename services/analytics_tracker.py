@@ -43,7 +43,15 @@ class AnalyticsTracker:
         self.logger = logging.getLogger(__name__)
         
         # Initialize database
-        self.db_path = os.path.join(os.path.dirname(settings.DATABASE_URL.replace('sqlite:///', '')), 'analytics.db')
+        if settings.DATABASE_URL.startswith('sqlite:///'):
+            db_path = settings.DATABASE_URL.replace('sqlite:///', '')
+            if db_path.startswith('./'):
+                self.db_path = db_path.replace('.db', '_analytics.db')
+            else:
+                self.db_path = os.path.join('.', db_path.replace('.db', '_analytics.db'))
+        else:
+            self.db_path = os.path.join('./data', 'analytics.db')
+        
         self._init_database()
         
         # Pinterest client reference (will be injected)

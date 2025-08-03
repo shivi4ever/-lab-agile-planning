@@ -21,7 +21,15 @@ class ContentStrategy:
         self.logger = logging.getLogger(__name__)
         
         # Initialize database
-        self.db_path = os.path.join(os.path.dirname(settings.DATABASE_URL.replace('sqlite:///', '')), 'content_strategy.db')
+        if settings.DATABASE_URL.startswith('sqlite:///'):
+            db_path = settings.DATABASE_URL.replace('sqlite:///', '')
+            if db_path.startswith('./'):
+                self.db_path = db_path
+            else:
+                self.db_path = os.path.join('.', db_path)
+        else:
+            self.db_path = os.path.join('./data', 'content_strategy.db')
+        
         self._init_database()
         
         # Load trending keywords and topics

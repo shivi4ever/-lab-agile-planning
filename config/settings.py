@@ -4,7 +4,7 @@ Configuration settings for Pinterest Automation Bot
 
 import os
 from typing import List, Dict, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -30,13 +30,13 @@ class Settings:
     WEBSITE_NAME: str = os.getenv('WEBSITE_NAME', 'Your Website')
     
     # Content Strategy Configuration
-    TARGET_NICHES: List[str] = [
+    TARGET_NICHES: List[str] = field(default_factory=lambda: [
         'lifestyle', 'home decor', 'fashion', 'food', 'travel', 
         'wellness', 'productivity', 'diy', 'inspiration', 'quotes'
-    ]
+    ])
     
     # Posting Schedule Configuration
-    POSTING_TIMES: List[str] = ['09:00', '15:00', '20:00']  # Optimal Pinterest times
+    POSTING_TIMES: List[str] = field(default_factory=lambda: ['09:00', '15:00', '20:00'])  # Optimal Pinterest times
     POSTS_PER_DAY: int = int(os.getenv('POSTS_PER_DAY', '3'))
     SKIP_WEEKENDS: bool = os.getenv('SKIP_WEEKENDS', 'false').lower() == 'true'
     
@@ -46,14 +46,14 @@ class Settings:
     RUN_INITIAL_POST: bool = os.getenv('RUN_INITIAL_POST', 'false').lower() == 'true'
     
     # Image Configuration
-    IMAGE_DIMENSIONS: Dict[str, tuple] = {
+    IMAGE_DIMENSIONS: Dict[str, tuple] = field(default_factory=lambda: {
         'standard': (1000, 1500),  # Pinterest optimal ratio 2:3
         'square': (1080, 1080),
         'story': (1080, 1920)
-    }
+    })
     
     # Database Configuration
-    DATABASE_URL: str = os.getenv('DATABASE_URL', 'sqlite:///pinterest_bot.db')
+    DATABASE_URL: str = os.getenv('DATABASE_URL', 'sqlite:///./data/pinterest_bot.db')
     
     # Analytics Configuration
     GOOGLE_ANALYTICS_ID: str = os.getenv('GOOGLE_ANALYTICS_ID', '')
@@ -69,7 +69,7 @@ class Settings:
     LOG_FILE_PATH: str = os.getenv('LOG_FILE_PATH', './logs/pinterest_bot.log')
     
     # Content Templates
-    CONTENT_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    CONTENT_TEMPLATES: Dict[str, Dict[str, Any]] = field(default_factory=lambda: {
         'lifestyle': {
             'prompt_templates': [
                 "Minimalist {theme} inspiration, clean aesthetic, modern design",
@@ -97,22 +97,23 @@ class Settings:
             'hashtags': ['#wellness', '#selfcare', '#mindfulness', '#health', '#zen'],
             'boards': ['Wellness Journey', 'Self Care', 'Mindful Living']
         }
-    }
+    })
     
     # Pinterest Board Configuration
-    DEFAULT_BOARDS: List[Dict[str, str]] = [
+    DEFAULT_BOARDS: List[Dict[str, str]] = field(default_factory=lambda: [
         {'name': 'AI Generated Art', 'description': 'Beautiful AI-generated artwork and designs'},
         {'name': 'Daily Inspiration', 'description': 'Daily dose of inspiration and motivation'},
         {'name': 'Lifestyle Ideas', 'description': 'Modern lifestyle inspiration and tips'},
         {'name': 'Creative Designs', 'description': 'Creative and artistic design inspiration'}
-    ]
+    ])
     
     def __post_init__(self):
         """Validate configuration after initialization."""
-        if not self.PINTEREST_APP_ID or not self.PINTEREST_APP_SECRET:
+        # Only validate if we have actual API keys (not demo values)
+        if not self.PINTEREST_APP_ID.startswith('demo_') and (not self.PINTEREST_APP_ID or not self.PINTEREST_APP_SECRET):
             raise ValueError("Pinterest API credentials are required")
         
-        if not self.OPENAI_API_KEY and not self.STABILITY_AI_KEY:
+        if not self.OPENAI_API_KEY.startswith('demo_') and not self.STABILITY_AI_KEY.startswith('demo_') and (not self.OPENAI_API_KEY and not self.STABILITY_AI_KEY):
             raise ValueError("At least one AI provider API key is required")
         
         if not self.WEBSITE_URL:
