@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  pinterest-bot:
+    build: .
+    container_name: pinterest-automation-bot
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./content:/app/content
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./.env:/app/.env
+    ports:
+      - "5000:5000"  # For OAuth callbacks
+    depends_on:
+      - redis
+    networks:
+      - pinterest-bot-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: pinterest-bot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pinterest-bot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Database for production use
+  postgres:
+    image: postgres:15-alpine
+    container_name: pinterest-bot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pinterest_bot
+      POSTGRES_USER: pinterest_user
+      POSTGRES_PASSWORD: pinterest_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pinterest-bot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pinterest_user -d pinterest_bot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Web dashboard for monitoring
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: pinterest-bot-dashboard
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - pinterest-bot
+      - redis
+    volumes:
+      - ./logs:/app/logs:ro
+      - ./data:/app/data:ro
+    networks:
+      - pinterest-bot-network
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: pinterest-bot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - pinterest-bot
+      - dashboard
+    networks:
+      - pinterest-bot-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  pinterest-bot-network:
+    driver: bridge
